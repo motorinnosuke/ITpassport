@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ITパスポート 4択対策アプリ</title>
+<style>
+:root {
+  --bg:#f6f7fb; --card:#fff; --ink:#172033; --muted:#657089; --line:#d9deea;
+  --accent:#335cff; --good:#12805c; --bad:#c9362c; --warn:#a56a00;
+}
+* { box-sizing:border-box; }
+body { margin:0; font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif; background:var(--bg); color:var(--ink); }
+header { position:sticky; top:0; z-index:3; background:rgba(246,247,251,.92); backdrop-filter: blur(10px); border-bottom:1px solid var(--line); }
+.wrap { max-width:1100px; margin:0 auto; padding:18px; }
+h1 { margin:0 0 8px; font-size: clamp(22px,4vw,34px); }
+.lead { color:var(--muted); margin:0; line-height:1.7; }
+.panel { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:16px; }
+.stat { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:12px; box-shadow:0 2px 10px rgba(20,30,50,.04); }
+.stat b { display:block; font-size:22px; }
+.controls { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+button, select, input { font:inherit; }
+button { border:0; border-radius:12px; padding:10px 14px; cursor:pointer; background:var(--accent); color:#fff; font-weight:700; }
+button.secondary { background:#e9ecf8; color:var(--ink); }
+button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+select, input { border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:12px; padding:10px; }
+main.wrap { padding-top:18px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:18px; margin:14px 0; box-shadow:0 8px 24px rgba(20,30,50,.06); }
+.meta { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; color:var(--muted); font-size:14px; }
+.badge { border:1px solid var(--line); border-radius:999px; padding:4px 9px; background:#f9fafc; }
+.q { font-size:18px; line-height:1.65; font-weight:750; margin:8px 0 14px; }
+.choices { display:grid; gap:10px; }
+.choice { width:100%; text-align:left; border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:14px; padding:12px 14px; font-weight:650; }
+.choice:hover { border-color:var(--accent); }
+.choice.correct { background:#e9f8f1; border-color:var(--good); color:#06452f; }
+.choice.wrong { background:#fff0ef; border-color:var(--bad); color:#721c18; }
+.choice:disabled { cursor:default; opacity:1; }
+.explain { display:none; margin-top:12px; padding:12px; border-radius:14px; background:#f6f7fb; border:1px solid var(--line); line-height:1.7; }
+.explain.show { display:block; }
+.result { font-weight:800; margin-bottom:6px; }
+.result.good { color:var(--good); }
+.result.bad { color:var(--bad); }
+.footerbar { position:sticky; bottom:0; background:rgba(246,247,251,.94); border-top:1px solid var(--line); padding:10px 0; backdrop-filter: blur(10px); }
+.progress { height:10px; background:#e3e7f2; border-radius:999px; overflow:hidden; }
+.progress > div { height:100%; background:var(--accent); width:0%; transition:.2s; }
+.small { font-size:13px; color:var(--muted); line-height:1.7; }
+.hidden { display:none; }
+@media (max-width:760px) {
+  .panel { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .controls { flex-direction:column; }
+  button, select, input { width:100%; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>ITパスポート 4択対策アプリ</h1>
+    <p class="lead">全103問。オリジナル問題。ストラテジ・マネジメント・テクノロジを横断して、選択すると自動採点します。</p>
+    <div class="panel">
+      <div class="stat"><span>出題数</span><b id="total">0</b></div>
+      <div class="stat"><span>解答済み</span><b id="done">0</b></div>
+      <div class="stat"><span>正解</span><b id="correct">0</b></div>
+      <div class="stat"><span>正答率</span><b id="rate">0%</b></div>
+    </div>
+    <div class="controls">
+      <select id="category">
+        <option value="all">全分野</option>
+        <option value="ストラテジ">ストラテジ系</option>
+        <option value="マネジメント">マネジメント系</option>
+        <option value="テクノロジ">テクノロジ系</option>
+        <option value="wrong">間違えた問題だけ</option>
+      </select>
+      <input id="keyword" placeholder="キーワード検索 例：セキュリティ、SQL、SLA">
+      <button id="shuffle">シャッフル</button>
+      <button id="reset" class="secondary">解答リセット</button>
+      <button id="review" class="ghost">解説をすべて表示</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="card small">
+    使い方：選択肢を押すと即採点され、正解と解説が表示されます。試験本番は100問・120分・四肢択一式なので、まずは全問を一周し、間違えた問題だけで復習してください。
+  </div>
+  <section id="list"></section>
+</main>
+
+<div class="footerbar">
+  <div class="wrap">
+    <div class="progress" aria-label="progress"><div id="bar"></div></div>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [{"id": 1, "category": "ストラテジ", "topic": "企業と法務", "question": "企業の社会的責任を表す用語はどれか。", "choices": ["CSR", "SLA", "RPA", "BYOD"], "answer": 0, "explanation": "CSRは企業が社会・環境・倫理などに配慮して責任ある活動を行う考え方です。"}, {"id": 2, "category": "ストラテジ", "topic": "企業と法務", "question": "損益計算書で売上高から売上原価を差し引いた利益はどれか。", "choices": ["営業利益", "経常利益", "売上総利益", "当期純利益"], "answer": 2, "explanation": "売上総利益は粗利益とも呼ばれ、売上高−売上原価で求めます。"}, {"id": 3, "category": "ストラテジ", "topic": "企業と法務", "question": "貸借対照表に表示されるものはどれか。", "choices": ["売上高", "資産", "売上原価", "販管費"], "answer": 1, "explanation": "貸借対照表は資産・負債・純資産を示します。"}, {"id": 4, "category": "ストラテジ", "topic": "企業と法務", "question": "著作権で保護される対象として適切なものはどれか。", "choices": ["単なるアイデア", "プログラムの表現", "数学の公式そのもの", "業務手順の概念"], "answer": 1, "explanation": "著作権はアイデアではなく、文章・音楽・プログラムなどの具体的表現を保護します。"}, {"id": 5, "category": "ストラテジ", "topic": "企業と法務", "question": "個人情報保護法における個人情報の例として最も適切なものはどれか。", "choices": ["匿名化され復元できない統計値", "氏名と住所の組合せ", "会社全体の売上高", "公開された業界平均"], "answer": 1, "explanation": "氏名、住所、メールアドレスなど個人を識別できる情報は個人情報に該当します。"}, {"id": 6, "category": "ストラテジ", "topic": "企業と法務", "question": "不正アクセス禁止法で禁止される行為はどれか。", "choices": ["許可されたIDで自分のメールを読む", "他人のIDとパスワードで無断ログインする", "公開Webサイトを閲覧する", "自分のPCの設定を変更する"], "answer": 1, "explanation": "他人の識別符号を無断で使ってアクセスする行為は禁止されています。"}, {"id": 7, "category": "ストラテジ", "topic": "経営戦略", "question": "SWOT分析で自社内部のプラス要因はどれか。", "choices": ["機会", "脅威", "強み", "弱み"], "answer": 2, "explanation": "SWOTのSはStrength、つまり内部環境における強みです。"}, {"id": 8, "category": "ストラテジ", "topic": "経営戦略", "question": "PPMで市場成長率が高く相対的市場占有率も高い事業はどれか。", "choices": ["花形", "金のなる木", "問題児", "負け犬"], "answer": 0, "explanation": "花形は成長率・占有率とも高く、将来の収益源になり得ます。"}, {"id": 9, "category": "ストラテジ", "topic": "経営戦略", "question": "競争優位の源泉として差別化戦略に該当するものはどれか。", "choices": ["価格だけを徹底的に下げる", "独自機能やブランド価値で選ばれる", "全事業から撤退する", "在庫をゼロにする"], "answer": 1, "explanation": "差別化戦略は機能・品質・ブランドなどで他社と違いを出す戦略です。"}, {"id": 10, "category": "ストラテジ", "topic": "経営戦略", "question": "顧客との関係を管理し、販売やサポートに活用する考え方はどれか。", "choices": ["CRM", "SCM", "BPR", "MRP"], "answer": 0, "explanation": "CRMはCustomer Relationship Management、顧客関係管理です。"}, {"id": 11, "category": "ストラテジ", "topic": "経営戦略", "question": "調達から販売までの供給連鎖を全体最適化する考え方はどれか。", "choices": ["ERP", "SCM", "CRM", "MBO"], "answer": 1, "explanation": "SCMはSupply Chain Managementで、供給連鎖全体を管理します。"}, {"id": 12, "category": "ストラテジ", "topic": "経営戦略", "question": "既存の業務手順を抜本的に見直し再設計する考え方はどれか。", "choices": ["BPR", "OJT", "BCP", "KPI"], "answer": 0, "explanation": "BPRはBusiness Process Re-engineeringで、業務プロセスの根本的改革を指します。"}, {"id": 13, "category": "ストラテジ", "topic": "システム戦略", "question": "経営資源を統合管理する基幹業務パッケージはどれか。", "choices": ["ERP", "DNS", "IDS", "BIOS"], "answer": 0, "explanation": "ERPは会計・人事・販売・生産などの経営資源を統合的に管理します。"}, {"id": 14, "category": "ストラテジ", "topic": "システム戦略", "question": "企業のデータを分析し意思決定に活用する仕組みはどれか。", "choices": ["BI", "NAT", "RAID", "SMTP"], "answer": 0, "explanation": "BIはBusiness Intelligenceで、データ分析により意思決定を支援します。"}, {"id": 15, "category": "ストラテジ", "topic": "システム戦略", "question": "定型作業をソフトウェアロボットで自動化する仕組みはどれか。", "choices": ["RPA", "VPN", "WAF", "OSS"], "answer": 0, "explanation": "RPAはPC上の定型作業などを自動化する技術です。"}, {"id": 16, "category": "ストラテジ", "topic": "システム戦略", "question": "クラウドのSaaSの説明として適切なものはどれか。", "choices": ["OSやミドルウェアだけを借りる", "ソフトウェア機能をインターネット経由で利用する", "物理サーバだけを購入する", "通信回線だけを暗号化する"], "answer": 1, "explanation": "SaaSはアプリケーション機能をサービスとして利用する形態です。"}, {"id": 17, "category": "ストラテジ", "topic": "システム企画", "question": "RFPの目的として適切なものはどれか。", "choices": ["提案依頼書としてベンダに要件や条件を示す", "完成後の操作手順を記録する", "障害ログを圧縮する", "従業員の勤務表を作る"], "answer": 0, "explanation": "RFPはRequest For Proposalで、提案依頼書です。"}, {"id": 18, "category": "ストラテジ", "topic": "システム企画", "question": "システム化計画で最初に明確にすべきことはどれか。", "choices": ["導入目的と解決したい課題", "画面の色だけ", "開発者の昼食場所", "ケーブルの型番だけ"], "answer": 0, "explanation": "目的や業務課題を明確にしないと、適切な要件定義や効果測定ができません。"}, {"id": 19, "category": "ストラテジ", "topic": "企業と法務", "question": "KPIの説明として適切なものはどれか。", "choices": ["重要業績評価指標", "企業秘密保持契約", "暗号鍵の長さ", "ネットワークの物理規格"], "answer": 0, "explanation": "KPIは目標達成度を測る重要な指標です。"}, {"id": 20, "category": "ストラテジ", "topic": "企業と法務", "question": "損益分岐点売上高に関係する費用の組合せはどれか。", "choices": ["固定費と変動費", "資産と負債", "現金と預金", "売掛金と買掛金"], "answer": 0, "explanation": "損益分岐点は固定費、変動費、売上高の関係で求めます。"}, {"id": 21, "category": "ストラテジ", "topic": "企業と法務", "question": "QC七つ道具に含まれるものはどれか。", "choices": ["パレート図", "損益計算書", "貸借対照表", "ガントレット"], "answer": 0, "explanation": "パレート図、特性要因図、ヒストグラムなどはQC七つ道具です。"}, {"id": 22, "category": "ストラテジ", "topic": "企業と法務", "question": "PDCAサイクルのAは何を表すか。", "choices": ["計画", "実行", "評価", "改善"], "answer": 3, "explanation": "PDCAはPlan、Do、Check、Actです。"}, {"id": 23, "category": "ストラテジ", "topic": "企業と法務", "question": "コンプライアンスの説明として適切なものはどれか。", "choices": ["法令や社会規範を守ること", "売上を最大化する広告手法", "データを圧縮する方式", "ネットワークを高速化する装置"], "answer": 0, "explanation": "コンプライアンスは法令遵守だけでなく、社会的規範への適合も含みます。"}, {"id": 24, "category": "ストラテジ", "topic": "経営戦略", "question": "ターゲット顧客を年齢・性別・地域などで分けることはどれか。", "choices": ["セグメンテーション", "バックアップ", "デバッグ", "レプリケーション"], "answer": 0, "explanation": "セグメンテーションは市場を一定の基準で細分化することです。"}, {"id": 25, "category": "ストラテジ", "topic": "システム戦略", "question": "IoTの説明として最も適切なものはどれか。", "choices": ["モノがネットワークにつながり情報をやり取りする仕組み", "古いソフトだけを使う方針", "紙文書を郵送する制度", "暗号鍵を手渡しする方法"], "answer": 0, "explanation": "IoTはInternet of Thingsの略で、機器やセンサーなどがネットワークにつながります。"}, {"id": 26, "category": "ストラテジ", "topic": "システム戦略", "question": "生成AIの利用で特に注意すべきことはどれか。", "choices": ["出力内容の正確性や著作権・機密情報の扱いを確認する", "出力は常に法的に正しいとみなす", "社外秘情報を無条件に入力する", "誤情報が絶対に出ないと考える"], "answer": 0, "explanation": "生成AIは誤情報や権利侵害、機密漏えいに注意して使う必要があります。"}, {"id": 27, "category": "ストラテジ", "topic": "企業と法務", "question": "NDAの目的はどれか。", "choices": ["秘密情報の取扱いを契約で定める", "ネットワーク機器を初期化する", "売掛金を回収する", "CPUを高速化する"], "answer": 0, "explanation": "NDAは秘密保持契約です。"}, {"id": 28, "category": "ストラテジ", "topic": "経営戦略", "question": "ロングテール戦略の説明として適切なものはどれか。", "choices": ["少量多品種の商品を広く扱い総販売量を伸ばす", "一つの商品だけを大量販売する", "在庫をすべて廃棄する", "広告を一切行わない"], "answer": 0, "explanation": "ロングテールは売れ筋以外の多数の商品群からも売上を得る考え方です。"}, {"id": 29, "category": "ストラテジ", "topic": "システム企画", "question": "要件定義で行うことはどれか。", "choices": ["利用者がシステムに求める機能や条件を明確化する", "完成後の機器を廃棄する", "社員旅行の行き先を決める", "暗号鍵をランダムに公開する"], "answer": 0, "explanation": "要件定義では業務要件、機能要件、非機能要件などを明確にします。"}, {"id": 30, "category": "ストラテジ", "topic": "経営戦略", "question": "ベンチマーキングの説明として適切なものはどれか。", "choices": ["優れた他社や部門の方法と比較し改善に活かす", "製品を物理的に分解する", "データを暗号化する", "ユーザIDを削除する"], "answer": 0, "explanation": "ベンチマーキングは優良事例と比較して改善点を見つける手法です。"}, {"id": 31, "category": "マネジメント", "topic": "開発技術", "question": "ウォータフォールモデルの特徴はどれか。", "choices": ["工程を順番に進め、前工程の成果物を基に次工程へ進む", "毎日必ず本番リリースする", "設計せずに運用だけ行う", "利用者の意見を一切聞かない"], "answer": 0, "explanation": "ウォータフォールは要件定義、設計、開発、テストなどを順に進めます。"}, {"id": 32, "category": "マネジメント", "topic": "開発技術", "question": "アジャイル開発の特徴として適切なものはどれか。", "choices": ["短い期間で反復し、変更に対応しながら開発する", "全機能完成まで利用者に見せない", "必ず紙だけで設計する", "テストを省略する"], "answer": 0, "explanation": "アジャイルは短い反復で価値を確認しながら開発します。"}, {"id": 33, "category": "マネジメント", "topic": "開発技術", "question": "単体テストの説明として適切なものはどれか。", "choices": ["個々のプログラム部品が正しく動くか確認する", "全社の経営戦略を決める", "通信回線を契約する", "会計監査を行う"], "answer": 0, "explanation": "単体テストはモジュールや関数など小さな単位のテストです。"}, {"id": 34, "category": "マネジメント", "topic": "開発技術", "question": "結合テストの目的はどれか。", "choices": ["複数の機能や部品を組み合わせたときの動作を確認する", "売上を予測する", "在庫を棚卸しする", "社員の評価を行う"], "answer": 0, "explanation": "結合テストはモジュール間のインタフェースや連携を確認します。"}, {"id": 35, "category": "マネジメント", "topic": "プロジェクトマネジメント", "question": "プロジェクトの作業を階層的に分解したものはどれか。", "choices": ["WBS", "SLA", "DNS", "CPU"], "answer": 0, "explanation": "WBSはWork Breakdown Structureで作業分解構成図です。"}, {"id": 36, "category": "マネジメント", "topic": "プロジェクトマネジメント", "question": "ガントチャートで主に把握できるものはどれか。", "choices": ["作業の予定期間や進捗", "暗号強度", "CPUの命令セット", "個人情報の定義"], "answer": 0, "explanation": "ガントチャートは横棒でタスク期間や進捗を可視化します。"}, {"id": 37, "category": "マネジメント", "topic": "プロジェクトマネジメント", "question": "クリティカルパスの説明として適切なものはどれか。", "choices": ["遅れるとプロジェクト全体の完了が遅れる経路", "最も費用が安い経路", "最も人数が少ない部署", "暗号通信の経路"], "answer": 0, "explanation": "クリティカルパス上の作業遅延は全体納期に影響します。"}, {"id": 38, "category": "マネジメント", "topic": "プロジェクトマネジメント", "question": "リスク対応で、発生可能性や影響を小さくする対応はどれか。", "choices": ["軽減", "受容", "転嫁", "回避"], "answer": 0, "explanation": "軽減はリスクの発生確率や影響度を下げる対応です。"}, {"id": 39, "category": "マネジメント", "topic": "サービスマネジメント", "question": "SLAの説明として適切なものはどれか。", "choices": ["サービス提供者と利用者の間で合意するサービス水準", "会社法上の株主総会議事録", "プログラム言語の仕様", "暗号化の計算手順"], "answer": 0, "explanation": "SLAはService Level Agreementで、サービス水準合意です。"}, {"id": 40, "category": "マネジメント", "topic": "サービスマネジメント", "question": "インシデント管理の目的はどれか。", "choices": ["サービスの中断や品質低下から早期に復旧する", "新商品の市場価格を決める", "財務諸表を作る", "OSを販売する"], "answer": 0, "explanation": "インシデント管理は利用者への影響を最小にし、通常運用に戻すことを重視します。"}, {"id": 41, "category": "マネジメント", "topic": "サービスマネジメント", "question": "問題管理の説明として適切なものはどれか。", "choices": ["インシデントの根本原因を調査し再発防止を図る", "ユーザへの一時回答だけで終了する", "会議室を予約する", "IPアドレスを暗号化する"], "answer": 0, "explanation": "問題管理は根本原因の特定と再発防止に焦点を当てます。"}, {"id": 42, "category": "マネジメント", "topic": "サービスマネジメント", "question": "変更管理で重要なことはどれか。", "choices": ["影響やリスクを評価して承認後に変更する", "全変更を無断で即時反映する", "記録を残さない", "利用者へ知らせない"], "answer": 0, "explanation": "変更管理は無秩序な変更による障害を防ぐために評価・承認・記録を行います。"}, {"id": 43, "category": "マネジメント", "topic": "システム監査", "question": "システム監査の目的として適切なものはどれか。", "choices": ["情報システムの信頼性・安全性・効率性などを客観的に評価する", "監査人がシステムを必ず開発する", "プログラムを自動生成する", "利用者の趣味を分析する"], "answer": 0, "explanation": "システム監査は独立した立場から統制や運用状況を評価します。"}, {"id": 44, "category": "マネジメント", "topic": "システム監査", "question": "監査証跡の説明として適切なものはどれか。", "choices": ["処理や操作の記録を追跡できるログなど", "暗号鍵を紙で配る手順", "営業利益の別名", "画面デザインの色見本"], "answer": 0, "explanation": "監査証跡は誰がいつ何をしたかを後から確認するための記録です。"}, {"id": 45, "category": "マネジメント", "topic": "サービスマネジメント", "question": "可用性を高める対策として適切なものはどれか。", "choices": ["冗長化やバックアップを行う", "パスワードを短くする", "ログを全て削除する", "サーバを単一構成に限定する"], "answer": 0, "explanation": "冗長化やバックアップは障害時の継続性を高めます。"}, {"id": 46, "category": "マネジメント", "topic": "開発技術", "question": "ユーザ受入テストの主な目的はどれか。", "choices": ["利用者の業務要件を満たすか確認する", "ソースコードの字下げだけを見る", "開発者の勤怠を確認する", "CPUの温度を測る"], "answer": 0, "explanation": "受入テストでは利用者視点で業務に使えるか確認します。"}, {"id": 47, "category": "マネジメント", "topic": "プロジェクトマネジメント", "question": "スコープ管理で防ぐべきことはどれか。", "choices": ["合意なしに作業範囲が拡大すること", "バックアップ取得", "品質向上", "リスク登録"], "answer": 0, "explanation": "スコープクリープは範囲が無秩序に拡大する問題です。"}, {"id": 48, "category": "マネジメント", "topic": "プロジェクトマネジメント", "question": "ステークホルダの説明として適切なものはどれか。", "choices": ["プロジェクトに利害関係を持つ人や組織", "必ず株主だけ", "ネットワーク機器だけ", "ファイル形式だけ"], "answer": 0, "explanation": "顧客、利用者、経営者、開発者などがステークホルダになり得ます。"}, {"id": 49, "category": "マネジメント", "topic": "サービスマネジメント", "question": "構成管理の対象として適切なものはどれか。", "choices": ["サーバ、ソフトウェア、設定、ライセンスなどの構成情報", "社員の昼食メニュー", "広告コピーの感想", "天気予報"], "answer": 0, "explanation": "構成管理はITサービスを構成する要素を把握・管理します。"}, {"id": 50, "category": "マネジメント", "topic": "システム監査", "question": "内部統制の説明として適切なものはどれか。", "choices": ["業務の有効性、財務報告の信頼性、法令遵守などを確保する仕組み", "個人PCの壁紙設定", "通信速度を上げる専用装置", "顧客名簿の印刷形式"], "answer": 0, "explanation": "内部統制は組織が目的を達成しリスクを抑えるための仕組みです。"}, {"id": 51, "category": "テクノロジ", "topic": "基礎理論", "question": "2進数の1010を10進数に変換した値はどれか。", "choices": ["8", "10", "12", "15"], "answer": 1, "explanation": "1010₂は8+2=10です。"}, {"id": 52, "category": "テクノロジ", "topic": "基礎理論", "question": "8ビットで表現できる異なるビット列の数はどれか。", "choices": ["8", "16", "128", "256"], "answer": 3, "explanation": "各ビットは2通りなので2の8乗=256通りです。"}, {"id": 53, "category": "テクノロジ", "topic": "基礎理論", "question": "AND演算の結果が1になる条件はどれか。", "choices": ["少なくとも一方が1", "両方が1", "両方が0", "必ず1"], "answer": 1, "explanation": "ANDは入力がすべて1のときだけ1になります。"}, {"id": 54, "category": "テクノロジ", "topic": "コンピュータ構成要素", "question": "CPUの役割として最も適切なものはどれか。", "choices": ["演算と制御を行う", "紙を印刷する", "電源だけを供給する", "ネットワーク名を管理する"], "answer": 0, "explanation": "CPUは命令を解釈し、演算・制御を行います。"}, {"id": 55, "category": "テクノロジ", "topic": "コンピュータ構成要素", "question": "RAMの特徴はどれか。", "choices": ["電源を切ると内容が失われる揮発性メモリ", "変更できない光ディスク", "紙の帳票", "必ず外部記憶装置"], "answer": 0, "explanation": "主記憶に使われるRAMは一般に揮発性です。"}, {"id": 56, "category": "テクノロジ", "topic": "コンピュータ構成要素", "question": "SSDの特徴として適切なものはどれか。", "choices": ["半導体メモリを用いた補助記憶装置", "磁気テープだけを使う装置", "CPUの別名", "OSのライセンス"], "answer": 0, "explanation": "SSDはフラッシュメモリなどを利用する補助記憶装置です。"}, {"id": 57, "category": "テクノロジ", "topic": "システム構成要素", "question": "RAID1の説明として適切なものはどれか。", "choices": ["同じデータを複数のディスクに書き込むミラーリング", "データを圧縮する方式", "通信を暗号化する方式", "画面を拡大する機能"], "answer": 0, "explanation": "RAID1はミラーリングにより耐障害性を高めます。"}, {"id": 58, "category": "テクノロジ", "topic": "システム構成要素", "question": "クライアントサーバシステムの説明はどれか。", "choices": ["サービスを提供する側と利用する側に役割を分ける", "全端末が必ず同じ役割だけを持つ", "紙だけで業務を行う", "電源を二重化するだけ"], "answer": 0, "explanation": "サーバがサービスを提供し、クライアントが要求します。"}, {"id": 59, "category": "テクノロジ", "topic": "ソフトウェア", "question": "OSの主な役割はどれか。", "choices": ["ハードウェア資源を管理しアプリの実行環境を提供する", "会計基準を決める", "法律を制定する", "広告文を作成する"], "answer": 0, "explanation": "OSはCPU、メモリ、ファイル、入出力などを管理します。"}, {"id": 60, "category": "テクノロジ", "topic": "ソフトウェア", "question": "OSSの説明として適切なものはどれか。", "choices": ["ソースコードが公開され利用・改変できるソフトウェア", "必ず無料で保証付きの市販ソフト", "暗号鍵の長さ", "CPUの製造方法"], "answer": 0, "explanation": "OSSはライセンス条件に従って利用・改変・再配布できるソフトウェアです。"}, {"id": 61, "category": "テクノロジ", "topic": "データベース", "question": "関係データベースで表の行を表す用語はどれか。", "choices": ["レコード", "フィールド", "スキーマだけ", "インデックスだけ"], "answer": 0, "explanation": "表の行はレコード、列はフィールドまたは属性と呼ばれます。"}, {"id": 62, "category": "テクノロジ", "topic": "データベース", "question": "主キーの説明として適切なものはどれか。", "choices": ["表の各行を一意に識別する項目", "必ず氏名を入れる項目", "削除できない画像", "通信を暗号化する鍵"], "answer": 0, "explanation": "主キーは重複せず、各レコードを一意に識別します。"}, {"id": 63, "category": "テクノロジ", "topic": "データベース", "question": "SQLのSELECT文の目的はどれか。", "choices": ["データを検索する", "電源を入れる", "ファイルを物理破壊する", "画面を印刷するだけ"], "answer": 0, "explanation": "SELECT文は表から条件に合うデータを取り出します。"}, {"id": 64, "category": "テクノロジ", "topic": "データベース", "question": "トランザクションのACID特性に含まれるものはどれか。", "choices": ["原子性", "広告性", "匿名性だけ", "圧縮性"], "answer": 0, "explanation": "ACIDは原子性、一貫性、独立性、耐久性を指します。"}, {"id": 65, "category": "テクノロジ", "topic": "ネットワーク", "question": "LANの説明として適切なものはどれか。", "choices": ["同一建物や限られた範囲のネットワーク", "世界規模の法律", "会計帳簿", "画像圧縮形式"], "answer": 0, "explanation": "LANはLocal Area Networkです。"}, {"id": 66, "category": "テクノロジ", "topic": "ネットワーク", "question": "IPアドレスの役割はどれか。", "choices": ["ネットワーク上の機器を識別する", "画像の色数を増やす", "電源を安定化する", "著作権を登録する"], "answer": 0, "explanation": "IPアドレスはネットワーク上の宛先や送信元を識別します。"}, {"id": 67, "category": "テクノロジ", "topic": "ネットワーク", "question": "DNSの役割はどれか。", "choices": ["ドメイン名とIPアドレスを対応付ける", "データを必ず暗号化する", "CPUを冷却する", "表計算を行う"], "answer": 0, "explanation": "DNSは名前解決を行います。"}, {"id": 68, "category": "テクノロジ", "topic": "ネットワーク", "question": "HTTPの説明として適切なものはどれか。", "choices": ["Webページの転送などに使われるプロトコル", "画像を印刷する用紙規格", "物理メモリの規格", "会計処理の基準"], "answer": 0, "explanation": "HTTPはWebブラウザとWebサーバ間の通信に使われます。"}, {"id": 69, "category": "テクノロジ", "topic": "ネットワーク", "question": "HTTPSで追加される主な効果はどれか。", "choices": ["通信の暗号化と相手確認", "ディスク容量の増加", "CPUクロックの向上", "画面解像度の固定"], "answer": 0, "explanation": "HTTPSはTLSにより通信を暗号化し、サーバ証明書で相手確認を行います。"}, {"id": 70, "category": "テクノロジ", "topic": "ネットワーク", "question": "VPNの目的として適切なものはどれか。", "choices": ["公衆回線上に仮想的な専用線を構築する", "画面を明るくする", "紙文書を保管する", "CPUを増設する"], "answer": 0, "explanation": "VPNは暗号化などにより安全な仮想専用ネットワークを作ります。"}, {"id": 71, "category": "テクノロジ", "topic": "セキュリティ", "question": "マルウェアの説明として適切なものはどれか。", "choices": ["悪意のあるソフトウェアの総称", "表計算の関数", "暗号化された安全な通信", "正規のバックアップ媒体"], "answer": 0, "explanation": "ウイルス、ワーム、ランサムウェアなどはマルウェアに含まれます。"}, {"id": 72, "category": "テクノロジ", "topic": "セキュリティ", "question": "ランサムウェアの特徴はどれか。", "choices": ["データを暗号化するなどして身代金を要求する", "通信速度を必ず上げる", "画面を拡大する", "会計書類を作る"], "answer": 0, "explanation": "ランサムウェアはデータや端末を使えなくし金銭を要求します。"}, {"id": 73, "category": "テクノロジ", "topic": "セキュリティ", "question": "フィッシングの説明として適切なものはどれか。", "choices": ["偽サイトなどに誘導しIDやパスワードを盗む", "通信速度を測定する", "OSを更新する", "正規バックアップを取る"], "answer": 0, "explanation": "フィッシングは偽メール・偽サイトなどで認証情報をだまし取る攻撃です。"}, {"id": 74, "category": "テクノロジ", "topic": "セキュリティ", "question": "多要素認証の説明として適切なものはどれか。", "choices": ["知識・所持・生体など複数種類の要素で認証する", "同じパスワードを二回入力するだけ", "IDを公開すること", "ログを削除すること"], "answer": 0, "explanation": "多要素認証は異なる種類の認証要素を組み合わせます。"}, {"id": 75, "category": "テクノロジ", "topic": "セキュリティ", "question": "共通鍵暗号方式の特徴はどれか。", "choices": ["暗号化と復号に同じ鍵を使う", "公開鍵だけを使う", "鍵が不要", "必ず紙で送る"], "answer": 0, "explanation": "共通鍵暗号では送受信者が同じ秘密鍵を共有します。"}, {"id": 76, "category": "テクノロジ", "topic": "セキュリティ", "question": "公開鍵暗号方式で秘密鍵について適切な説明はどれか。", "choices": ["所有者だけが厳重に保管する", "全員に公開する", "毎回Webに掲載する", "使わない"], "answer": 0, "explanation": "秘密鍵は本人だけが保持し、漏えいさせてはいけません。"}, {"id": 77, "category": "テクノロジ", "topic": "セキュリティ", "question": "デジタル署名で確認できることはどれか。", "choices": ["改ざんの有無や署名者の確認", "通信速度の保証", "データ容量の削減だけ", "必ず匿名化されること"], "answer": 0, "explanation": "デジタル署名は完全性と本人性の確認に使われます。"}, {"id": 78, "category": "テクノロジ", "topic": "セキュリティ", "question": "ハッシュ関数の用途として適切なものはどれか。", "choices": ["データの改ざん検知", "画像の色補正だけ", "CPU冷却", "売上予測だけ"], "answer": 0, "explanation": "ハッシュ値を比較することでデータが変化したか確認できます。"}, {"id": 79, "category": "テクノロジ", "topic": "セキュリティ", "question": "ファイアウォールの主な役割はどれか。", "choices": ["通信を制御し不正なアクセスを防ぐ", "電源を供給する", "画面を表示する", "データベースの表を作る"], "answer": 0, "explanation": "ファイアウォールは通信の許可・遮断を制御します。"}, {"id": 80, "category": "テクノロジ", "topic": "セキュリティ", "question": "WAFが主に防御対象とするものはどれか。", "choices": ["Webアプリケーションへの攻撃", "物理的な停電", "プリンタの紙詰まり", "CPUの発熱"], "answer": 0, "explanation": "WAFはSQLインジェクションなどWebアプリへの攻撃対策に使われます。"}, {"id": 81, "category": "テクノロジ", "topic": "セキュリティ", "question": "SQLインジェクションの説明として適切なものはどれか。", "choices": ["入力欄に不正なSQLを混入させDBを操作する攻撃", "電源を切る攻撃", "画面を暗くする操作", "正規の表計算関数"], "answer": 0, "explanation": "入力値を適切に検証・エスケープしないとSQLを不正実行される恐れがあります。"}, {"id": 82, "category": "テクノロジ", "topic": "セキュリティ", "question": "バックアップの3-2-1ルールの考え方として近いものはどれか。", "choices": ["複数コピーを異なる媒体に保存し一つは別場所に置く", "同じPC内に一つだけ保存する", "バックアップを取らない", "毎回上書きして履歴を残さない"], "answer": 0, "explanation": "3-2-1は複数コピー、複数媒体、オフサイト保管を重視する考え方です。"}, {"id": 83, "category": "テクノロジ", "topic": "アルゴリズム", "question": "フローチャートで処理を表す基本記号はどれか。", "choices": ["長方形", "ひし形", "楕円", "雲形"], "answer": 0, "explanation": "一般に長方形は処理、ひし形は判断を表します。"}, {"id": 84, "category": "テクノロジ", "topic": "アルゴリズム", "question": "変数の説明として適切なものはどれか。", "choices": ["値を一時的に記憶する名前付きの領域", "固定された法律名", "紙の帳票番号だけ", "通信ケーブルの種類"], "answer": 0, "explanation": "プログラムでは変数に値を格納し、後で参照・更新します。"}, {"id": 85, "category": "テクノロジ", "topic": "アルゴリズム", "question": "線形探索の説明として適切なものはどれか。", "choices": ["先頭から順番に目的のデータを探す", "必ず半分ずつ範囲を狭める", "暗号化して探す", "表を削除する"], "answer": 0, "explanation": "線形探索はデータを一つずつ順に確認します。"}, {"id": 86, "category": "テクノロジ", "topic": "アルゴリズム", "question": "二分探索を効率よく行う前提はどれか。", "choices": ["データが整列済みである", "データが暗号化済みである", "データが画像だけである", "データが必ず1件だけである"], "answer": 0, "explanation": "二分探索は整列済みデータに対して探索範囲を半分に絞ります。"}, {"id": 87, "category": "テクノロジ", "topic": "情報メディア", "question": "JPEGの用途として適切なものはどれか。", "choices": ["写真画像の圧縮", "音声通話のプロトコル", "表計算の関数", "暗号鍵の保管"], "answer": 0, "explanation": "JPEGは写真などの画像圧縮形式として広く使われます。"}, {"id": 88, "category": "テクノロジ", "topic": "情報メディア", "question": "CSVの説明として適切なものはどれか。", "choices": ["項目をカンマなどで区切ったテキスト形式", "音声を圧縮する方式", "CPUの命令形式", "無線LANの暗号方式"], "answer": 0, "explanation": "CSVは表形式データをテキストで表現する形式です。"}, {"id": 89, "category": "テクノロジ", "topic": "ヒューマンインタフェース", "question": "アクセシビリティの説明として適切なものはどれか。", "choices": ["年齢や障害の有無にかかわらず利用しやすくすること", "必ず画面を派手にすること", "ネットワークを遮断すること", "暗号鍵を複雑にすること"], "answer": 0, "explanation": "アクセシビリティは多様な利用者が情報や機能にアクセスしやすいことです。"}, {"id": 90, "category": "テクノロジ", "topic": "セキュリティ", "question": "ゼロトラストの考え方として適切なものはどれか。", "choices": ["内部外部を問わず常に検証してアクセスを許可する", "社内ネットワークなら無条件で信頼する", "パスワードを不要にする", "ログを残さない"], "answer": 0, "explanation": "ゼロトラストは「何も無条件に信頼しない」前提で認証・認可・監視します。"}, {"id": 91, "category": "テクノロジ", "topic": "セキュリティ", "question": "脆弱性への基本的な対策として適切なものはどれか。", "choices": ["修正プログラムを適用する", "更新を永久に止める", "パスワードを共有する", "ログを公開する"], "answer": 0, "explanation": "パッチ適用は既知の脆弱性対策の基本です。"}, {"id": 92, "category": "テクノロジ", "topic": "ネットワーク", "question": "無線LANの暗号化方式として比較的新しく安全性が高いものはどれか。", "choices": ["WPA3", "WEP", "平文通信", "POP3"], "answer": 0, "explanation": "WPA3は無線LANの新しいセキュリティ規格です。"}, {"id": 93, "category": "テクノロジ", "topic": "データベース", "question": "データの正規化の目的はどれか。", "choices": ["データの重複や更新不整合を減らす", "通信を暗号化する", "画面を拡大する", "CPUを冷却する"], "answer": 0, "explanation": "正規化はデータの重複を抑え、一貫性を保ちやすくします。"}, {"id": 94, "category": "テクノロジ", "topic": "システム構成要素", "question": "スケールアウトの説明として適切なものはどれか。", "choices": ["サーバ台数を増やして処理能力を高める", "1台のCPUだけを高性能化する", "画面を拡大する", "表を削除する"], "answer": 0, "explanation": "スケールアウトは複数台に分散して性能を高めます。"}, {"id": 95, "category": "テクノロジ", "topic": "システム構成要素", "question": "スケールアップの説明として適切なものはどれか。", "choices": ["1台のサーバのCPUやメモリを強化する", "サーバ台数を必ず減らす", "ユーザ数を減らす", "ログを削除する"], "answer": 0, "explanation": "スケールアップは単体機器の性能を強化する方法です。"}, {"id": 96, "category": "テクノロジ", "topic": "ソフトウェア", "question": "仮想化の説明として適切なものはどれか。", "choices": ["物理資源を論理的に分割・統合して利用する技術", "紙文書を保管する制度", "著作権を移転する契約", "必ず通信を遮断する技術"], "answer": 0, "explanation": "仮想化により1台の物理サーバ上で複数の仮想サーバを動かせます。"}, {"id": 97, "category": "テクノロジ", "topic": "AI・データ活用", "question": "機械学習の教師あり学習の説明として適切なものはどれか。", "choices": ["正解付きデータでモデルを学習する", "正解データを一切使わないクラスタリングだけ", "人間が計算を手作業で行うだけ", "ネットワークを必ず切断する"], "answer": 0, "explanation": "教師あり学習は入力と正解ラベルの組合せから学習します。"}, {"id": 98, "category": "テクノロジ", "topic": "AI・データ活用", "question": "ビッグデータの特徴としてよく挙げられる3Vに含まれるものはどれか。", "choices": ["Volume", "Voltage", "Virus", "Version"], "answer": 0, "explanation": "3VはVolume、Velocity、Varietyなどを指します。"}, {"id": 99, "category": "テクノロジ", "topic": "セキュリティ", "question": "ソーシャルエンジニアリングの例として適切なものはどれか。", "choices": ["人をだましてパスワードを聞き出す", "CPUを交換する", "データを正規化する", "画像を圧縮する"], "answer": 0, "explanation": "技術的手段だけでなく、人間の心理や行動の隙を突く攻撃です。"}, {"id": 100, "category": "テクノロジ", "topic": "ネットワーク", "question": "NATの説明として適切なものはどれか。", "choices": ["プライベートIPアドレスとグローバルIPアドレスを変換する", "データベースを正規化する", "画像を圧縮する", "著作権を登録する"], "answer": 0, "explanation": "NATはNetwork Address Translationです。"}, {"id": 101, "category": "テクノロジ", "topic": "セキュリティ", "question": "情報セキュリティの三要素に含まれないものはどれか。", "choices": ["機密性", "完全性", "可用性", "装飾性"], "answer": 3, "explanation": "情報セキュリティの三要素は機密性・完全性・可用性です。"}, {"id": 102, "category": "テクノロジ", "topic": "情報メディア", "question": "音声や画像などの連続的な情報を数値化することはどれか。", "choices": ["デジタル化", "棚卸し", "減価償却", "監査"], "answer": 0, "explanation": "アナログ情報を標本化・量子化などでデジタルデータにします。"}, {"id": 103, "category": "テクノロジ", "topic": "基礎理論", "question": "1KBを1024バイトとして、1MBは何KBか。", "choices": ["100", "512", "1024", "2048"], "answer": 2, "explanation": "情報処理分野では1MB=1024KBとして扱う場合があります。"}];
+let order = [...QUESTIONS.keys()];
+let answers = JSON.parse(localStorage.getItem("itpass_answers_v1") || "{}");
+let showAllExplanations = false;
+
+const el = id => document.getElementById(id);
+const list = el("list");
+
+function save() {
+  localStorage.setItem("itpass_answers_v1", JSON.stringify(answers));
+}
+
+function filtered() {
+  const cat = el("category").value;
+  const kw = el("keyword").value.trim().toLowerCase();
+  return order.map(i => QUESTIONS[i]).filter(q => {
+    const wrongOnly = cat === "wrong";
+    if (wrongOnly && !(answers[q.id] !== undefined && answers[q.id] !== q.answer)) return false;
+    if (!wrongOnly && cat !== "all" && q.category !== cat) return false;
+    if (kw) {
+      const text = (q.category + q.topic + q.question + q.choices.join("") + q.explanation).toLowerCase();
+      if (!text.includes(kw)) return false;
+    }
+    return true;
+  });
+}
+
+function render() {
+  const qs = filtered();
+  list.innerHTML = "";
+  if (!qs.length) {
+    list.innerHTML = '<div class="card">表示できる問題がありません。</div>';
+  }
+  for (const q of qs) {
+    const chosen = answers[q.id];
+    const answered = chosen !== undefined;
+    const card = document.createElement("article");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="meta"><span class="badge">Q${q.id}</span><span class="badge">${q.category}系</span><span class="badge">${q.topic}</span></div>
+      <div class="q">${escapeHtml(q.question)}</div>
+      <div class="choices"></div>
+      <div class="explain ${answered || showAllExplanations ? "show" : ""}">
+        ${answered ? `<div class="result ${chosen === q.answer ? "good" : "bad"}">${chosen === q.answer ? "正解" : "不正解"}：正解は「${escapeHtml(q.choices[q.answer])}」</div>` : `<div class="result">正解：${escapeHtml(q.choices[q.answer])}</div>`}
+        <div>${escapeHtml(q.explanation)}</div>
+      </div>
+    `;
+    const choices = card.querySelector(".choices");
+    q.choices.forEach((c, idx) => {
+      const b = document.createElement("button");
+      b.className = "choice";
+      b.textContent = `${"ア イ ウ エ"[idx*2] || idx+1}. ${c}`;
+      if (answered || showAllExplanations) {
+        b.disabled = true;
+        if (idx === q.answer) b.classList.add("correct");
+        if (answered && idx === chosen && chosen !== q.answer) b.classList.add("wrong");
+      }
+      b.addEventListener("click", () => {
+        if (answers[q.id] !== undefined) return;
+        answers[q.id] = idx;
+        save();
+        render();
+      });
+      choices.appendChild(b);
+    });
+    list.appendChild(card);
+  }
+  updateStats(qs);
+}
+
+function updateStats(qs) {
+  const allVisible = qs.length;
+  const doneQs = qs.filter(q => answers[q.id] !== undefined);
+  const correct = doneQs.filter(q => answers[q.id] === q.answer).length;
+  el("total").textContent = allVisible;
+  el("done").textContent = doneQs.length;
+  el("correct").textContent = correct;
+  el("rate").textContent = doneQs.length ? Math.round(correct / doneQs.length * 100) + "%" : "0%";
+  el("bar").style.width = allVisible ? (doneQs.length / allVisible * 100) + "%" : "0%";
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+}
+
+el("category").addEventListener("change", render);
+el("keyword").addEventListener("input", render);
+el("shuffle").addEventListener("click", () => {
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  render();
+  window.scrollTo({top:0, behavior:"smooth"});
+});
+el("reset").addEventListener("click", () => {
+  if (confirm("解答履歴をリセットしますか？")) {
+    answers = {};
+    save();
+    render();
+  }
+});
+el("review").addEventListener("click", () => {
+  showAllExplanations = !showAllExplanations;
+  el("review").textContent = showAllExplanations ? "解説を隠す" : "解説をすべて表示";
+  render();
+});
+render();
+</script>
+</body>
+</html>
