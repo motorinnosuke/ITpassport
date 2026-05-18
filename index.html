@@ -56,7 +56,7 @@ button.ghost { background:#fff; color:var(--accent); border:1px solid var(--acce
 .choice.correct { background:#e8f8f0; border-color:var(--good); color:#06452f; }
 .choice.wrong { background:#fff0ef; border-color:var(--bad); color:#721c18; }
 .choice:disabled { cursor:default; opacity:1; }
-.explain { display:none; margin-top:11px; padding:12px 13px; border-radius:14px; background:#f7f9fd; border:1px solid var(--line); line-height:1.65; font-size:14px; }
+.explain { display:none; margin:12px 15px 15px; padding:12px 13px; border-radius:14px; background:#f7f9fd; border:1px solid var(--line); line-height:1.65; font-size:14px; }
 .explain.show { display:block; }
 .result { font-weight:850; margin-bottom:4px; }
 .result.good { color:var(--good); }
@@ -86,7 +86,7 @@ button.ghost { background:#fff; color:var(--accent); border:1px solid var(--acce
 <header class="app-header">
   <div class="header-inner">
     <h1>ITパスポート 4択対策アプリ</h1>
-    <p class="lead">上部1/3は固定。下部2/3だけ問題をスクロール。選択すると自動採点します。</p>
+    <p class="lead">上部1/3は固定。問題カードは「解説を表示」ボタンまで固定され、解説部分だけ読み進めやすくしています。</p>
     <div class="panel">
       <div class="stat"><span>出題数</span><b id="total">0</b></div>
       <div class="stat"><span>解答済み</span><b id="done">0</b></div>
@@ -163,9 +163,13 @@ function render() {
     const card = document.createElement("article");
     card.className = "card";
     card.innerHTML = `
-      <div class="meta"><span class="badge">Q${q.id}</span><span class="badge">${q.category}系</span><span class="badge">${q.topic}</span></div>
-      <div class="q">${escapeHtml(q.question)}</div>
-      <div class="choices"></div>
+      <div class="question-fixed">
+        <div class="meta"><span class="badge">Q${q.id}</span><span class="badge">${q.category}系</span><span class="badge">${q.topic}</span></div>
+        <div class="q">${escapeHtml(q.question)}</div>
+        <div class="choices"></div>
+        ${answered ? `<div class="statusline ${chosen === q.answer ? "good" : "bad"}">${chosen === q.answer ? "正解" : "不正解"}</div>` : ""}
+        <button class="explain-toggle" type="button">${isOpen ? "解説を非表示" : "解説を表示"}</button>
+      </div>
       <div class="explain ${isOpen ? "show" : ""}">
         ${answered ? `<div class="result ${chosen === q.answer ? "good" : "bad"}">${chosen === q.answer ? "正解" : "不正解"}：正解は「${escapeHtml(q.choices[q.answer])}」</div>` : `<div class="result">正解：${escapeHtml(q.choices[q.answer])}</div>`}
         <div>${escapeHtml(q.explanation)}</div>
@@ -189,6 +193,13 @@ function render() {
         render();
       });
       choices.appendChild(b);
+    });
+    card.querySelector(".explain-toggle").addEventListener("click", () => {
+      openedExplanations[q.id] = !(showAllExplanations || openedExplanations[q.id] === true);
+      if (showAllExplanations) showAllExplanations = false;
+      el("review").textContent = "解説をすべて表示";
+      save();
+      render();
     });
     list.appendChild(card);
   }
