@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITパスポート 対策アプリ</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#161b22;
+    --panel2:#1c2530;
+    --line:#2a3441;
+    --ink:#e8eef5;
+    --muted:#8b97a7;
+    --accent:#4cc9b0;
+    --accent2:#f2a65a;
+    --correct:#3fb950;
+    --wrong:#f0506e;
+    --strat:#6ea8fe;
+    --manage:#f2a65a;
+    --tech:#4cc9b0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(900px 500px at 80% -10%, rgba(76,201,176,.10), transparent 60%),
+      radial-gradient(700px 500px at -10% 110%, rgba(110,168,254,.10), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI","Noto Sans JP",system-ui,sans-serif;
+    line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:28px 20px 80px}
+  header.app{
+    display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:26px;
+  }
+  header.app h1{
+    font-size:1.5rem;font-weight:800;letter-spacing:.02em;
+    background:linear-gradient(100deg,var(--accent),var(--strat));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  header.app .sub{color:var(--muted);font-size:.82rem}
+  .badge{
+    margin-left:auto;font-size:.72rem;color:var(--muted);
+    border:1px solid var(--line);padding:4px 10px;border-radius:999px;
+  }
+
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line);border-radius:16px;
+    padding:24px;margin-bottom:18px;
+  }
+  h2{font-size:1.05rem;margin-bottom:14px;font-weight:700}
+  p.lead{color:var(--muted);font-size:.9rem;margin-bottom:20px}
+
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.modes{grid-template-columns:1fr}}
+  .mode-btn{
+    text-align:left;background:#11161d;border:1px solid var(--line);
+    border-radius:12px;padding:16px 18px;cursor:pointer;color:var(--ink);
+    transition:.16s;font-family:inherit;
+  }
+  .mode-btn:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .mode-btn .t{font-weight:700;font-size:.98rem;margin-bottom:4px}
+  .mode-btn .d{color:var(--muted);font-size:.8rem;line-height:1.5}
+
+  .fields{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .chip{
+    border:1px solid var(--line);background:#11161d;color:var(--ink);
+    border-radius:999px;padding:8px 16px;cursor:pointer;font-size:.85rem;
+    font-family:inherit;transition:.14s;
+  }
+  .chip[data-on="1"]{border-color:var(--accent);background:rgba(76,201,176,.12);color:var(--accent)}
+  .chip.s[data-on="1"]{border-color:var(--strat);background:rgba(110,168,254,.12);color:var(--strat)}
+  .chip.m[data-on="1"]{border-color:var(--manage);background:rgba(242,166,90,.14);color:var(--accent2)}
+
+  .startbar{display:flex;align-items:center;gap:14px;margin-top:22px;flex-wrap:wrap}
+  .btn{
+    background:linear-gradient(100deg,var(--accent),#3aa792);
+    color:#04241e;border:none;border-radius:10px;padding:12px 26px;
+    font-weight:800;font-size:.95rem;cursor:pointer;font-family:inherit;
+    transition:.15s;
+  }
+  .btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .btn.ghost:hover{border-color:var(--accent)}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px}
+  .stat{background:#11161d;border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+  .stat .n{font-size:1.5rem;font-weight:800}
+  .stat .l{color:var(--muted);font-size:.74rem;margin-top:2px}
+
+  /* Quiz */
+  .qhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .qmeta{color:var(--muted);font-size:.8rem}
+  .tag{font-size:.7rem;padding:3px 9px;border-radius:999px;font-weight:700}
+  .tag.s{background:rgba(110,168,254,.16);color:var(--strat)}
+  .tag.m{background:rgba(242,166,90,.16);color:var(--accent2)}
+  .tag.t{background:rgba(76,201,176,.16);color:var(--tech)}
+  .progress{height:6px;background:#11161d;border-radius:999px;overflow:hidden;margin:14px 0 22px}
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--strat));transition:width .3s}
+  .qtext{font-size:1.08rem;font-weight:600;margin-bottom:20px;white-space:pre-wrap}
+  .opts{display:flex;flex-direction:column;gap:10px}
+  .opt{
+    text-align:left;background:#11161d;border:1px solid var(--line);
+    border-radius:10px;padding:13px 16px;cursor:pointer;color:var(--ink);
+    font-family:inherit;font-size:.92rem;transition:.13s;display:flex;gap:12px;align-items:flex-start;
+  }
+  .opt:hover:not(:disabled){border-color:var(--accent)}
+  .opt .k{
+    flex:0 0 26px;height:26px;border-radius:6px;border:1px solid var(--line);
+    display:grid;place-items:center;font-weight:800;font-size:.82rem;color:var(--muted)
+  }
+  .opt.correct{border-color:var(--correct);background:rgba(63,185,80,.12)}
+  .opt.correct .k{border-color:var(--correct);color:var(--correct)}
+  .opt.wrong{border-color:var(--wrong);background:rgba(240,80,110,.12)}
+  .opt.wrong .k{border-color:var(--wrong);color:var(--wrong)}
+  .opt:disabled{cursor:default}
+
+  .explain{
+    margin-top:18px;border-left:3px solid var(--accent);
+    background:#11161d;border-radius:0 10px 10px 0;padding:14px 18px;
+    font-size:.9rem;color:#cdd7e3;display:none;
+  }
+  .explain.show{display:block;animation:fade .25s ease}
+  .explain b{color:var(--accent)}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+
+  .navrow{display:flex;justify-content:space-between;margin-top:24px;gap:10px}
+
+  /* Result */
+  .score-big{font-size:3.4rem;font-weight:800;text-align:center;margin:8px 0}
+  .score-big small{font-size:1rem;color:var(--muted);font-weight:600}
+  .verdict{text-align:center;font-weight:700;margin-bottom:20px}
+  .pass{color:var(--correct)}.fail{color:var(--wrong)}
+  .breakdown{display:flex;flex-direction:column;gap:12px;margin-top:8px}
+  .brow{display:flex;align-items:center;gap:12px}
+  .brow .nm{flex:0 0 110px;font-size:.85rem}
+  .brow .bar{flex:1;height:10px;background:#11161d;border-radius:999px;overflow:hidden}
+  .brow .bar > i{display:block;height:100%}
+  .brow .pct{flex:0 0 56px;text-align:right;font-size:.82rem;color:var(--muted)}
+
+  .review-item{border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:10px;background:#11161d}
+  .review-item .rq{font-weight:600;font-size:.9rem;margin-bottom:8px}
+  .review-item .ra{font-size:.83rem;color:var(--muted)}
+  .review-item .ra .ok{color:var(--correct)}
+  .review-item .ra .ng{color:var(--wrong)}
+  .hidden{display:none}
+  footer{color:var(--muted);font-size:.74rem;text-align:center;margin-top:30px;line-height:1.6}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app">
+    <div>
+      <h1>ITパスポート 対策アプリ</h1>
+      <div class="sub">IPA シラバス準拠 / 4択 / 自動採点</div>
+    </div>
+    <span class="badge" id="poolBadge">問題読込中…</span>
+  </header>
+
+  <!-- HOME -->
+  <section id="home">
+    <div class="card">
+      <h2>学習モードを選ぶ</h2>
+      <p class="lead">出題分野を選んでからモードを開始します(初期は全分野ON)。</p>
+      <div class="fields" id="fieldChips">
+        <button class="chip s" data-f="strategy" data-on="1">ストラテジ系</button>
+        <button class="chip m" data-f="management" data-on="1">マネジメント系</button>
+        <button class="chip" data-f="technology" data-on="1">テクノロジ系</button>
+      </div>
+      <div class="modes" style="margin-top:20px">
+        <button class="mode-btn" data-mode="field">
+          <div class="t">分野別演習</div>
+          <div class="d">選択した分野からランダム出題。解くたびに即採点+解説。</div>
+        </button>
+        <button class="mode-btn" data-mode="random">
+          <div class="t">ランダム20問</div>
+          <div class="d">全選択分野からランダムに20問。実力チェック向け。</div>
+        </button>
+        <button class="mode-btn" data-mode="mock">
+          <div class="t">本番模試(100問)</div>
+          <div class="d">本試験を再現。総合6割+各分野3割で合格判定。</div>
+        </button>
+        <button class="mode-btn" data-mode="review">
+          <div class="t">間違えた問題の復習</div>
+          <div class="d">過去に誤答した問題だけを再出題(履歴保存時)。</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>これまでの学習</h2>
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="stTotal">0</div><div class="l">累計解答数</div></div>
+        <div class="stat"><div class="n" id="stRate">–</div><div class="l">累計正答率</div></div>
+        <div class="stat"><div class="n" id="stWeak">0</div><div class="l">復習候補</div></div>
+      </div>
+      <div class="startbar">
+        <button class="btn ghost" id="resetBtn">学習履歴をリセット</button>
+        <span class="qmeta" id="storeNote"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz" class="hidden">
+    <div class="card">
+      <div class="qhead">
+        <span class="qmeta" id="qCounter">1 / 20</span>
+        <span class="tag" id="qTag">分野</span>
+      </div>
+      <div class="progress"><i id="qBar" style="width:0%"></i></div>
+      <div class="qtext" id="qText"></div>
+      <div class="opts" id="qOpts"></div>
+      <div class="explain" id="qExplain"></div>
+      <div class="navrow">
+        <button class="btn ghost" id="quitBtn">中断してホームへ</button>
+        <button class="btn" id="nextBtn" disabled>次へ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="result" class="hidden">
+    <div class="card">
+      <h2>採点結果</h2>
+      <div class="score-big" id="rScore">0<small>/0</small></div>
+      <div class="verdict" id="rVerdict"></div>
+      <div class="breakdown" id="rBreak"></div>
+      <div class="startbar">
+        <button class="btn" id="againBtn">もう一度ホームへ</button>
+        <button class="btn ghost" id="toggleReview">解答を確認</button>
+      </div>
+    </div>
+    <div class="card hidden" id="reviewCard">
+      <h2>解答レビュー</h2>
+      <div id="reviewList"></div>
+    </div>
+  </section>
+
+  <footer>
+    問題はIPA「ITパスポート試験 シラバス」および公開過去問の出題範囲に準拠して作成した学習用問題です。<br>
+    最新の制度・出題範囲は <a href="https://www3.jitec.ipa.go.jp/JitesCbt/" target="_blank" rel="noopener">IPA公式サイト</a> をご確認ください。<br>
+    学習履歴はお使いのブラウザ(localStorage)に保存されます。
+  </footer>
+</div>
+
+<script>
+/* =========================================================================
+   問題データ  field: strategy / management / technology
+   ※ IPA ITパスポート シラバスの出題範囲に準拠した学習用問題
+   ========================================================================= */
+const QUESTIONS = [
+/* ---------- ストラテジ系 ---------- */
+{f:"strategy",q:"企業の経営理念を実現するための、中長期的な方向性や目標を示したものはどれか。",
+ o:["業務マニュアル","経営戦略","就業規則","作業手順書"],a:1,
+ e:"経営戦略は経営理念を実現するための中長期の方向性・目標を示すもの。マニュアルや手順書は日常業務の具体的なやり方を示す文書で目的が異なる。"},
+{f:"strategy",q:"SWOT分析における「機会(Opportunity)」に該当するものはどれか。",
+ o:["自社の高い技術力","市場の急成長","従業員の高齢化","競合の新製品投入"],a:1,
+ e:"SWOTは強み・弱み(内部要因)、機会・脅威(外部要因)。市場の急成長は外部のプラス要因=機会。自社技術力は強み、競合の新製品は脅威。"},
+{f:"strategy",q:"PPM(プロダクトポートフォリオマネジメント)で、市場成長率が高く市場占有率も高い事業を指す区分はどれか。",
+ o:["金のなる木","花形","問題児","負け犬"],a:1,
+ e:"PPMでは市場成長率(縦)と市場占有率(横)で4区分する。両方高いのが「花形」、占有率のみ高いのが「金のなる木」。"},
+{f:"strategy",q:"自社の中核となる強み(真似されにくい独自能力)を指す用語はどれか。",
+ o:["コアコンピタンス","アライアンス","アウトソーシング","ベンチマーキング"],a:0,
+ e:"コアコンピタンスは競合が容易に模倣できない自社固有の中核的能力。ベンチマーキングは他社の優れた事例との比較分析。"},
+{f:"strategy",q:"複数企業が資本や技術を提供し合い共同で新会社を設立する形態はどれか。",
+ o:["M&A","ジョイントベンチャ","フランチャイズ","OEM"],a:1,
+ e:"ジョイントベンチャは複数企業が共同出資して新会社を設立する形態。OEMは相手先ブランドによる製造。"},
+{f:"strategy",q:"顧客との関係を維持・強化し、長期的な収益向上を目指す経営手法はどれか。",
+ o:["SCM","CRM","ERP","SFA"],a:1,
+ e:"CRM(顧客関係管理)は顧客満足度・ロイヤルティ向上で長期収益を目指す。SCMは供給連鎖管理、ERPは経営資源の統合管理。"},
+{f:"strategy",q:"企業の業務プロセスを抜本的に見直し、再設計する経営手法はどれか。",
+ o:["BPR","BCP","KPI","CSR"],a:0,
+ e:"BPR(ビジネスプロセスリエンジニアリング)は業務プロセスの抜本的再設計。BCPは事業継続計画、CSRは企業の社会的責任。"},
+{f:"strategy",q:"損益分岐点売上高を求める式として正しいものはどれか。",
+ o:["固定費 ÷(1 − 変動費率)","固定費 × 変動費率","売上高 − 変動費","固定費 + 変動費"],a:0,
+ e:"損益分岐点売上高 = 固定費 ÷ 限界利益率 = 固定費 ÷(1 − 変動費率)。利益がゼロになる売上高を表す。"},
+{f:"strategy",q:"知的財産権のうち、プログラムやデータベースを保護する権利はどれか。",
+ o:["特許権","実用新案権","著作権","商標権"],a:2,
+ e:"プログラムやデータベースは著作物として著作権で保護される。特許権は発明、商標権は商品・サービスの識別標識を保護する。"},
+{f:"strategy",q:"あるアイデアや技術を独占的に実施できる権利で、出願・審査を経て付与され存続期間が定められているものはどれか。",
+ o:["著作権","特許権","営業秘密","肖像権"],a:1,
+ e:"特許権は発明を保護し、出願・審査を経て登録され、原則出願から20年で存続期間が満了する。著作権は創作時に自動発生する。"},
+{f:"strategy",q:"e-ビジネスのうち、企業間の電子商取引を表す用語はどれか。",
+ o:["BtoC","BtoB","CtoC","GtoC"],a:1,
+ e:"BtoBは企業間取引(Business to Business)。BtoCは企業対消費者、CtoCは消費者間取引。"},
+{f:"strategy",q:"IoT(Internet of Things)の説明として最も適切なものはどれか。",
+ o:["人工知能が自律的に学習する技術","あらゆるモノをネットワークに接続する仕組み","仮想空間で会議を行う技術","大量データを高速集計するデータベース"],a:1,
+ e:"IoTはセンサなどを備えた多様なモノをインターネットに接続し、情報の収集・制御を行う仕組み。"},
+{f:"strategy",q:"企業会計で、一定期間の経営成績(収益と費用)を示す財務諸表はどれか。",
+ o:["貸借対照表","損益計算書","キャッシュフロー計算書","株主資本等変動計算書"],a:1,
+ e:"損益計算書(P/L)は一定期間の収益・費用・利益を示す。貸借対照表(B/S)は一時点の資産・負債・純資産を示す。"},
+{f:"strategy",q:"複数の商品を組み合わせて、単独販売より魅力的な価格で提供する販売手法はどれか。",
+ o:["ダイナミックプライシング","バンドリング","サブスクリプション","フリーミアム"],a:1,
+ e:"バンドリングは複数商品をセット販売する手法。フリーミアムは基本無料・付加機能有料のモデル。"},
+{f:"strategy",q:"AIにおける「機械学習」のうち、正解ラベル付きデータを用いて学習する方式はどれか。",
+ o:["教師あり学習","教師なし学習","強化学習","深層強化学習"],a:0,
+ e:"教師あり学習は入力と正解(ラベル)の組で学習する。教師なし学習はラベルなしデータから構造を見つける(クラスタリング等)。"},
+{f:"strategy",q:"企業が遵守すべき法令や社会規範を守る活動を指す用語はどれか。",
+ o:["コンプライアンス","コーポレートガバナンス","ディスクロージャ","アカウンタビリティ"],a:0,
+ e:"コンプライアンスは法令遵守。コーポレートガバナンスは企業統治の仕組み、ディスクロージャは情報開示。"},
+{f:"strategy",q:"個人情報保護法において、本人の同意なく第三者へ提供してよいのは原則どれか。",
+ o:["どのような場合でも提供可","法令に基づく場合など例外を除き提供不可","社内であれば常に提供可","匿名化していなくても提供可"],a:1,
+ e:"個人情報は原則として本人同意なく第三者提供できないが、法令に基づく場合など限定的な例外がある。"},
+{f:"strategy",q:"商品の販売実績データを分析し、関連して売れる商品の組合せを見つける分析はどれか。",
+ o:["回帰分析","バスケット分析","時系列分析","クラスタ分析"],a:1,
+ e:"バスケット分析(マーケットバスケット分析)は同時購入される商品の関連を分析する。POSデータ活用の代表例。"},
+{f:"strategy",q:"事業の成否を測る重要業績評価指標を表す用語はどれか。",
+ o:["KGI","KPI","SLA","ROI"],a:1,
+ e:"KPIは重要業績評価指標(過程の指標)。KGIは重要目標達成指標(最終目標)。両者を区別して理解する。"},
+{f:"strategy",q:"テレワークを導入する企業側の主なメリットとして最も適切なものはどれか。",
+ o:["通信コストが必ずゼロになる","オフィスの省スペース化や事業継続性の向上","情報漏えいリスクが完全に無くなる","勤怠管理が不要になる"],a:1,
+ e:"テレワークはオフィスコスト削減や災害時の事業継続に有効。一方で情報漏えい対策や勤怠管理はむしろ重要になる。"},
+
+/* ---------- マネジメント系 ---------- */
+{f:"management",q:"プロジェクトマネジメントで、成果物を細分化して階層的に表した図はどれか。",
+ o:["ガントチャート","WBS","アローダイアグラム","パレート図"],a:1,
+ e:"WBS(作業分解構成図)は成果物・作業を階層的に分解した構造。スコープ管理やスケジュール作成の基礎となる。"},
+{f:"management",q:"作業の前後関係と所要日数から、全体の最短完了日数を求める手法はどれか。",
+ o:["クリティカルパス法","ファンクションポイント法","モンテカルロ法","デルファイ法"],a:0,
+ e:"クリティカルパス法は最長経路(余裕ゼロの経路)を求め、全体の最短所要期間を導く。遅れると全体が遅れる経路。"},
+{f:"management",q:"ガントチャートが主に表すものはどれか。",
+ o:["作業の依存関係のみ","各作業のスケジュール(開始・終了と進捗)","コストの累積","品質のばらつき"],a:1,
+ e:"ガントチャートは横棒で各作業の期間・進捗を時系列に示す。作業間の論理的依存関係はアローダイアグラムが得意。"},
+{f:"management",q:"プロジェクトのスコープ・コスト・時間の3要素を一般に何と呼ぶか。",
+ o:["3C","制約条件(トリプルコンストレイント)","PDCA","QCD"],a:1,
+ e:"スコープ・コスト・時間はプロジェクトの三大制約(トリプルコンストレイント)。一つを変えると他に影響する。"},
+{f:"management",q:"システム開発を要件定義→設計→実装→テストの順に進める開発モデルはどれか。",
+ o:["ウォータフォールモデル","アジャイル開発","プロトタイピング","スパイラルモデル"],a:0,
+ e:"ウォータフォールは工程を順に進めるモデル。アジャイルは短期反復で柔軟に開発、プロトタイピングは試作で要件を確認する。"},
+{f:"management",q:"短い期間の反復(イテレーション)を繰り返し、変化に柔軟に対応する開発手法はどれか。",
+ o:["ウォータフォール開発","アジャイル開発","V字モデル","ビッグバンテスト"],a:1,
+ e:"アジャイル開発は短い反復で動くソフトを継続的に提供し、要求変化へ柔軟に対応する。スクラムやXPが代表。"},
+{f:"management",q:"プログラム単体の論理が正しく動くかを確認するテストはどれか。",
+ o:["単体テスト","結合テスト","システムテスト","運用テスト"],a:0,
+ e:"単体テストはモジュール単体の動作確認。結合テストはモジュール間連携、システムテストは全体、運用テストは実運用想定の確認。"},
+{f:"management",q:"プログラムの内部構造に着目してテストケースを設計する技法はどれか。",
+ o:["ブラックボックステスト","ホワイトボックステスト","回帰テスト","負荷テスト"],a:1,
+ e:"ホワイトボックステストは内部論理(分岐・経路)に着目。ブラックボックステストは仕様(入出力)に着目する。"},
+{f:"management",q:"ITサービスマネジメントのフレームワークとして広く知られるものはどれか。",
+ o:["ITIL","COBIT","PMBOK","CMMI"],a:0,
+ e:"ITILはITサービスマネジメントのベストプラクティス集。PMBOKはプロジェクトマネジメントの知識体系。"},
+{f:"management",q:"利用者からの問合せやインシデントを一元的に受け付ける窓口はどれか。",
+ o:["サービスデスク","データセンタ","プロジェクトオフィス","システム監査室"],a:0,
+ e:"サービスデスク(ヘルプデスク)は利用者対応の単一窓口(SPOC)。問合せ受付・インシデント記録・一次対応を担う。"},
+{f:"management",q:"提供するサービスの品質や範囲を、提供者と利用者の間で合意した文書はどれか。",
+ o:["SLA","NDA","RFP","SOW"],a:0,
+ e:"SLA(サービスレベル合意書)はサービス品質水準を合意する文書。RFPは提案依頼書、NDAは秘密保持契約。"},
+{f:"management",q:"システム監査の主たる目的として最も適切なものはどれか。",
+ o:["新システムを開発すること","情報システムを独立した立場で点検・評価し改善を促すこと","利用者教育を実施すること","ハードウェアを保守すること"],a:1,
+ e:"システム監査は独立・客観的な立場で情報システムを点検・評価し、信頼性・安全性・効率性の改善につなげる。"},
+{f:"management",q:"内部統制において、不正防止のため一人に権限を集中させない原則はどれか。",
+ o:["職務分掌","相互牽制の排除","権限委譲の禁止","単独責任制"],a:0,
+ e:"職務分掌は業務と権限を分離し相互に牽制させる仕組み。発注担当と支払担当を分けるなど不正・誤謬を防ぐ。"},
+{f:"management",q:"開発規模を入出力や機能の数から見積もる手法はどれか。",
+ o:["ファンクションポイント法","COCOMO単独","類推法","デルファイ法"],a:0,
+ e:"ファンクションポイント法は外部入出力やファイル数など機能量から規模を見積もる。利用者視点で見積りやすい。"},
+{f:"management",q:"インシデント管理の主な目的として最も適切なものはどれか。",
+ o:["根本原因の恒久対策","サービスの迅速な復旧","新機能の追加","コスト削減のみ"],a:1,
+ e:"インシデント管理はサービスを可能な限り早く正常復旧させることが目的。根本原因の除去は問題管理が担う。"},
+{f:"management",q:"変更管理プロセスの目的として最も適切なものはどれか。",
+ o:["変更を一切認めないこと","変更による影響を評価し統制された形で実施すること","利用者の要望を全て即時反映すること","障害を記録すること"],a:1,
+ e:"変更管理は変更のリスク・影響を評価・承認し、統制された手順で実施・記録することで混乱を防ぐ。"},
+{f:"management",q:"ファシリティマネジメントが主に対象とするものはどれか。",
+ o:["ソフトウェアのソースコード","建物や電源・空調などの施設環境","ネットワークプロトコル","人事評価制度"],a:1,
+ e:"ファシリティマネジメントは設備・施設(建物、電源、空調、入退室など)を最適に維持管理する活動。"},
+{f:"management",q:"PDCAサイクルの「C」が表すものはどれか。",
+ o:["Plan(計画)","Do(実行)","Check(評価)","Act(改善)"],a:2,
+ e:"PDCAは計画→実行→評価→改善の継続的改善サイクル。Cは実施結果を評価・点検するCheckに当たる。"},
+{f:"management",q:"アローダイアグラム(PERT図)で表現できるものはどれか。",
+ o:["費用の内訳","作業の順序関係と所要時間","品質の度数分布","売上の構成比"],a:1,
+ e:"アローダイアグラムは作業の前後関係と所要時間を矢印で表し、日程計画やクリティカルパス分析に用いる。"},
+{f:"management",q:"プロジェクトのリスク対応戦略のうち「リスク移転」に該当するものはどれか。",
+ o:["保険を掛ける","リスク要因の作業をやめる","発生確率を下げる対策をする","あえて何もしない"],a:0,
+ e:"リスク移転は保険や外部委託で損失負担を第三者に移す対応。回避は作業中止、軽減は確率・影響の低減、受容は静観。"},
+
+/* ---------- テクノロジ系 ---------- */
+{f:"technology",q:"10進数の「13」を2進数で表したものはどれか。",
+ o:["1011","1101","1110","1001"],a:1,
+ e:"13 = 8+4+1 = 1101(2)。各桁は8・4・2・1の重み。検算: 1×8+1×4+0×2+1×1=13。"},
+{f:"technology",q:"コンピュータで、CPUが直接データをやり取りする高速な記憶装置はどれか。",
+ o:["ハードディスク","主記憶(メインメモリ)","光ディスク","磁気テープ"],a:1,
+ e:"CPUは主記憶(メモリ)と直接データをやり取りする。補助記憶(HDD等)は大容量だが低速で、データは主記憶へ読み込んで処理する。"},
+{f:"technology",q:"CPUと主記憶の速度差を埋めるために置かれる高速小容量メモリはどれか。",
+ o:["キャッシュメモリ","仮想記憶","ROM","フラッシュメモリ"],a:0,
+ e:"キャッシュメモリはCPUと主記憶の速度差を緩和する高速メモリ。よく使うデータを保持しアクセスを高速化する。"},
+{f:"technology",q:"OSの主な役割として最も適切なものはどれか。",
+ o:["表計算を行う","ハードウェア資源を管理しアプリに提供する","文書を作成する","画像を編集する"],a:1,
+ e:"OSはCPU・メモリ・入出力などの資源を管理し、アプリケーションへ実行環境を提供する基本ソフトウェア。"},
+{f:"technology",q:"関係データベースで、表中の行を一意に識別するための項目はどれか。",
+ o:["外部キー","主キー","インデックス","ビュー"],a:1,
+ e:"主キーは表の各行を一意に識別する項目(重複・NULL不可)。外部キーは他表の主キーを参照し関連付ける。"},
+{f:"technology",q:"データベースで、複数の処理を矛盾なく完結させる一連の処理単位はどれか。",
+ o:["トランザクション","インデックス","スキーマ","ストアドプロシージャ"],a:0,
+ e:"トランザクションは「全て成功か全て取消し」を保証する処理単位。ACID特性(原子性・一貫性・独立性・耐久性)を満たす。"},
+{f:"technology",q:"LANを相互接続し、宛先IPアドレスを見て最適経路へ転送する機器はどれか。",
+ o:["ハブ","ルータ","リピータ","モデム"],a:1,
+ e:"ルータはネットワーク間を接続しIPアドレスを基に経路選択(ルーティング)する。ハブは同一LAN内の集線装置。"},
+{f:"technology",q:"Webページの所在を示すURLにおいて「https」が表すものはどれか。",
+ o:["ファイル名","通信プロトコル(暗号化付き)","ドメイン名","ポート番号"],a:1,
+ e:"httpsは暗号化(TLS)されたHTTP通信のプロトコル。URLの先頭スキーム部で通信方式を表す。"},
+{f:"technology",q:"ドメイン名とIPアドレスを相互変換する仕組みはどれか。",
+ o:["DNS","DHCP","NAT","ARP"],a:0,
+ e:"DNSはドメイン名とIPアドレスの対応を解決する仕組み。DHCPはIPアドレス自動割当て、NATはアドレス変換。"},
+{f:"technology",q:"機器に対してIPアドレスなどのネットワーク設定を自動で割り当てるプロトコルはどれか。",
+ o:["DNS","DHCP","SMTP","FTP"],a:1,
+ e:"DHCPはIPアドレス・サブネットマスク・デフォルトゲートウェイ等を自動配布する。手動設定の手間を省く。"},
+{f:"technology",q:"電子メール送信に用いられるプロトコルはどれか。",
+ o:["SMTP","POP3","IMAP","HTTP"],a:0,
+ e:"SMTPはメール送信(サーバ間転送含む)に使う。受信はPOP3(ダウンロード型)やIMAP(サーバ保管型)を用いる。"},
+{f:"technology",q:"通信を暗号化し、盗聴・改ざんを防ぐためにWebで広く使われる技術はどれか。",
+ o:["SSL/TLS","FTP","Telnet","SNMP"],a:0,
+ e:"SSL/TLSは通信路を暗号化し盗聴・改ざん・なりすましを防ぐ。httpsはHTTPにTLSを組み合わせたもの。"},
+{f:"technology",q:"送信者が秘密鍵で署名し、受信者が公開鍵で検証することで、なりすましや改ざんを検知する技術はどれか。",
+ o:["共通鍵暗号","ディジタル署名","ハッシュのみ","ステガノグラフィ"],a:1,
+ e:"ディジタル署名は送信者の秘密鍵で署名、対応する公開鍵で検証し、本人性と非改ざんを保証する。"},
+{f:"technology",q:"利用者が知っている情報(パスワード)に加え、別の要素も用いて本人確認を強化する方式はどれか。",
+ o:["シングルサインオン","多要素認証","総当たり認証","パスワードリスト方式"],a:1,
+ e:"多要素認証は「知識・所持・生体」など異なる種類の要素を組み合わせ、なりすましを大幅に困難にする。"},
+{f:"technology",q:"情報セキュリティの三要素「機密性・完全性・可用性」のうち、可用性を高める対策はどれか。",
+ o:["アクセス権限の設定","データの暗号化","システムの二重化(冗長化)","改ざん検知"],a:2,
+ e:"可用性は必要なときに使える性質。冗長化やバックアップが該当。機密性は暗号化・アクセス制御、完全性は改ざん検知。"},
+{f:"technology",q:"実在の組織を装ったメールで偽サイトへ誘導し、認証情報をだまし取る攻撃はどれか。",
+ o:["フィッシング","DoS攻撃","SQLインジェクション","ゼロデイ攻撃"],a:0,
+ e:"フィッシングは正規を装い偽サイトへ誘導して情報を詐取する。DoSはサービス妨害、SQLインジェクションはDB不正操作。"},
+{f:"technology",q:"データを暗号化し復号と引き換えに金銭を要求するマルウェアはどれか。",
+ o:["ランサムウェア","スパイウェア","アドウェア","ワーム"],a:0,
+ e:"ランサムウェアはファイル等を暗号化し身代金を要求する。バックアップの分離保管が有効な対策となる。"},
+{f:"technology",q:"許可された通信だけを通過させ、不正な通信を遮断する仕組みはどれか。",
+ o:["ファイアウォール","ロードバランサ","プロキシキャッシュ","リバースDNS"],a:0,
+ e:"ファイアウォールは通信を監視し、ポリシに基づき許可/遮断するセキュリティ機構。境界防御の基本。"},
+{f:"technology",q:"表計算ソフトで、セルB1に「=A1*1.1」と入力しB1をB2へコピーした。B2の式はどれか。",
+ o:["=A1*1.1","=A2*1.1","=B1*1.1","=B2*1.1"],a:1,
+ e:"相対参照は貼り付け先に応じて参照がずれる。1行下へコピーすると A1→A2 となり「=A2*1.1」になる。"},
+{f:"technology",q:"複数のディスクに分散・冗長化して信頼性や性能を高める技術はどれか。",
+ o:["RAID","NAS単体","RAM","BIOS"],a:0,
+ e:"RAIDは複数ディスクをまとめ、ミラーリングやパリティで耐障害性・性能を向上させる技術。RAID1は冗長化重視。"},
+{f:"technology",q:"アルゴリズムにおいて、条件によって処理の流れを分ける構造はどれか。",
+ o:["順次","選択(分岐)","繰返し","再帰のみ"],a:1,
+ e:"構造化プログラミングの基本3構造は順次・選択・繰返し。選択は条件による分岐(if 等)を表す。"},
+{f:"technology",q:"先に入れたデータが先に取り出される(FIFO)データ構造はどれか。",
+ o:["スタック","キュー","木","ハッシュ表"],a:1,
+ e:"キューはFIFO(先入れ先出し)。スタックはLIFO(後入れ先出し)。用途に応じて使い分ける。"},
+{f:"technology",q:"複数の仮想的なコンピュータを1台の物理サーバ上で動作させる技術はどれか。",
+ o:["仮想化","正規化","多重化のみ","スプーリング"],a:0,
+ e:"仮想化は物理資源を論理的に分割・統合し、複数の仮想マシンを集約する。資源効率や柔軟性が向上する。"},
+{f:"technology",q:"インターネット経由でソフトウェアを必要に応じて利用するサービス形態はどれか。",
+ o:["SaaS","オンプレミス","スタンドアロン","ファームウェア"],a:0,
+ e:"SaaSはアプリをクラウド経由で提供する形態。オンプレミスは自社設備での運用形態で対比される。"},
+{f:"technology",q:"バイオメトリクス認証に該当するものはどれか。",
+ o:["パスワード","ICカード","指紋","ワンタイムトークン"],a:2,
+ e:"バイオメトリクス(生体認証)は指紋・顔・虹彩など身体的特徴を用いる。パスワードは知識、ICカードは所持による認証。"},
+{f:"technology",q:"記憶容量の単位を小さい順に正しく並べたものはどれか。",
+ o:["KB < MB < GB < TB","MB < KB < GB < TB","GB < MB < KB < TB","TB < GB < MB < KB"],a:0,
+ e:"記憶容量はKB→MB→GB→TBの順に約1000(1024)倍ずつ大きくなる。TBが最大。"}
+];
+
+/* ============================ 状態 ============================ */
+const FIELD_LABEL = {strategy:"ストラテジ系", management:"マネジメント系", technology:"テクノロジ系"};
+const FIELD_TAG   = {strategy:"s", management:"m", technology:"t"};
+const STORE_KEY   = "itp_progress_v1";
+
+let store = loadStore();
+let session = null;
+
+const $ = s => document.querySelector(s);
+const view = id => {
+  ["home","quiz","result"].forEach(v=>$("#"+v).classList.add("hidden"));
+  $("#"+id).classList.remove("hidden");
+  window.scrollTo(0,0);
+};
+
+function loadStore(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){ /* localStorage 不可環境 */ }
+  return {total:0, correct:0, wrongIds:[]};
+}
+function saveStore(){
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify(store));
+    $("#storeNote").textContent = "履歴は自動保存されています";
+  }catch(e){
+    $("#storeNote").textContent = "※この環境では履歴を保存できません(自分のPC/サーバーに置くと保存可)";
+  }
+}
+function qId(qObj){ return QUESTIONS.indexOf(qObj); }
+
+/* 分野チップ */
+$("#fieldChips").addEventListener("click",e=>{
+  const c = e.target.closest(".chip"); if(!c) return;
+  const on = c.getAttribute("data-on")==="1";
+  // 最低1つは残す
+  const active = [...document.querySelectorAll('.chip[data-on="1"]')];
+  if(on && active.length===1) return;
+  c.setAttribute("data-on", on?"0":"1");
+});
+function selectedFields(){
+  return [...document.querySelectorAll('.chip[data-on="1"]')].map(c=>c.getAttribute("data-f"));
+}
+
+/* モード開始 */
+document.querySelector(".modes").addEventListener("click",e=>{
+  const b = e.target.closest(".mode-btn"); if(!b) return;
+  startMode(b.getAttribute("data-mode"));
+});
+
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function startMode(mode){
+  const fields = selectedFields();
+  let pool = QUESTIONS.filter(q=>fields.includes(q.f));
+  let count;
+
+  if(mode==="field"){ count = Math.min(15, pool.length); }
+  else if(mode==="random"){ count = Math.min(20, pool.length); }
+  else if(mode==="mock"){
+    pool = QUESTIONS.slice(); // 模試は全分野
+    count = Math.min(100, pool.length);
+  }
+  else if(mode==="review"){
+    const ids = store.wrongIds || [];
+    pool = ids.map(i=>QUESTIONS[i]).filter(Boolean);
+    if(pool.length===0){ alert("復習対象の問題がありません。まずは演習で問題を解いてみましょう。"); return; }
+    count = pool.length;
+  }
+
+  const picked = shuffle(pool).slice(0,count).map(q=>{
+    // 選択肢シャッフル(正解インデックスを追跡)
+    const idx = q.o.map((_,i)=>i);
+    const sh = shuffle(idx);
+    return {
+      ref:q,
+      opts: sh.map(i=>q.o[i]),
+      ans: sh.indexOf(q.a),
+      chosen:null
+    };
+  });
+
+  session = {mode, list:picked, cur:0, score:0};
+  renderQ();
+  view("quiz");
+}
+
+function renderQ(){
+  const s = session, it = s.list[s.cur];
+  $("#qCounter").textContent = `${s.cur+1} / ${s.list.length}`;
+  const tg = $("#qTag");
+  tg.className = "tag " + FIELD_TAG[it.ref.f];
+  tg.textContent = FIELD_LABEL[it.ref.f];
+  $("#qBar").style.width = (s.cur/s.list.length*100)+"%";
+  $("#qText").textContent = it.ref.q;
+
+  const box = $("#qOpts"); box.innerHTML="";
+  const keys=["A","B","C","D"];
+  it.opts.forEach((txt,i)=>{
+    const btn=document.createElement("button");
+    btn.className="opt";
+    btn.innerHTML=`<span class="k">${keys[i]}</span><span>${txt}</span>`;
+    btn.addEventListener("click",()=>choose(i));
+    if(it.chosen!==null) btn.disabled=true;
+    box.appendChild(btn);
+  });
+
+  const ex=$("#qExplain"); ex.className="explain"; ex.innerHTML="";
+  $("#nextBtn").disabled = (it.chosen===null);
+  $("#nextBtn").textContent = (s.cur===s.list.length-1)?"採点する":"次へ";
+
+  if(it.chosen!==null) revealAnswer(it,false);
+
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function choose(i){
+  const s=session, it=s.list[s.cur];
+  if(it.chosen!==null) return;
+  it.chosen=i;
+  const correct = (i===it.ans);
+  if(correct) s.score++;
+
+  // 履歴更新
+  store.total++;
+  if(correct){
+    store.correct++;
+    store.wrongIds = (store.wrongIds||[]).filter(id=>id!==qId(it.ref));
+  }else{
+    if(!store.wrongIds) store.wrongIds=[];
+    const id=qId(it.ref);
+    if(!store.wrongIds.includes(id)) store.wrongIds.push(id);
+  }
+  saveStore();
+  revealAnswer(it,true);
+}
+
+function revealAnswer(it,animate){
+  const btns=[...document.querySelectorAll("#qOpts .opt")];
+  btns.forEach((b,idx)=>{
+    b.disabled=true;
+    if(idx===it.ans) b.classList.add("correct");
+    if(idx===it.chosen && it.chosen!==it.ans) b.classList.add("wrong");
+  });
+  const ex=$("#qExplain");
+  const ok = it.chosen===it.ans;
+  ex.innerHTML = `<b>${ok?"正解":"不正解"}</b> ｜ 正答: ${["A","B","C","D"][it.ans]}<br>${it.ref.e}`;
+  ex.className = "explain show";
+  $("#nextBtn").disabled=false;
+}
+
+$("#nextBtn").addEventListener("click",()=>{
+  const s=session;
+  if(s.cur < s.list.length-1){ s.cur++; renderQ(); }
+  else showResult();
+});
+$("#quitBtn").addEventListener("click",()=>{ if(confirm("中断してホームに戻りますか?(この回の結果は保存されません)")){ refreshHome(); view("home"); }});
+
+function showResult(){
+  const s=session;
+  const total=s.list.length, sc=s.score;
+  const pctAll = Math.round(sc/total*100);
+  $("#rScore").innerHTML = `${sc}<small> / ${total}</small>`;
+
+  // 分野別集計
+  const byF={};
+  s.list.forEach(it=>{
+    const f=it.ref.f;
+    byF[f]=byF[f]||{c:0,n:0};
+    byF[f].n++;
+    if(it.chosen===it.ans) byF[f].c++;
+  });
+
+  // 合格判定(模試): 総合60%以上 かつ 各分野30%以上
+  let verdict;
+  if(s.mode==="mock"){
+    let pass = pctAll>=60;
+    Object.values(byF).forEach(v=>{ if(v.c/v.n < 0.30) pass=false; });
+    verdict = pass
+      ? `<span class="pass">合格ライン到達(総合6割+各分野3割)</span>`
+      : `<span class="fail">基準未達 — 総合6割・各分野3割を目指しましょう</span>`;
+  }else{
+    verdict = pctAll>=80 ? `<span class="pass">よくできています(${pctAll}%)</span>`
+            : pctAll>=60 ? `合格圏内まであと一息(${pctAll}%)`
+            : `<span class="fail">基礎の復習を重点的に(${pctAll}%)</span>`;
+  }
+  $("#rVerdict").innerHTML = verdict;
+
+  const colors={strategy:"var(--strat)",management:"var(--accent2)",technology:"var(--tech)"};
+  $("#rBreak").innerHTML = Object.keys(byF).map(f=>{
+    const v=byF[f], p=Math.round(v.c/v.n*100);
+    return `<div class="brow">
+      <span class="nm">${FIELD_LABEL[f]}</span>
+      <span class="bar"><i style="width:${p}%;background:${colors[f]}"></i></span>
+      <span class="pct">${v.c}/${v.n}</span>
+    </div>`;
+  }).join("");
+
+  // レビュー
+  $("#reviewList").innerHTML = s.list.map((it,i)=>{
+    const ok=it.chosen===it.ans;
+    const chosenTxt = it.chosen!=null ? it.opts[it.chosen] : "(無回答)";
+    return `<div class="review-item">
+      <div class="rq">Q${i+1}. ${it.ref.q}</div>
+      <div class="ra">あなたの解答: <span class="${ok?'ok':'ng'}">${chosenTxt}</span><br>
+      正答: <span class="ok">${it.opts[it.ans]}</span><br>
+      <span style="color:#aab6c5">${it.ref.e}</span></div>
+    </div>`;
+  }).join("");
+  $("#reviewCard").classList.add("hidden");
+  $("#toggleReview").textContent="解答を確認";
+
+  view("result");
+}
+
+$("#toggleReview").addEventListener("click",()=>{
+  const c=$("#reviewCard");
+  const hidden=c.classList.toggle("hidden");
+  $("#toggleReview").textContent = hidden ? "解答を確認" : "解答を隠す";
+});
+$("#againBtn").addEventListener("click",()=>{ refreshHome(); view("home"); });
+
+$("#resetBtn").addEventListener("click",()=>{
+  if(confirm("学習履歴(累計成績・復習リスト)を全て削除します。よろしいですか?")){
+    store={total:0,correct:0,wrongIds:[]};
+    saveStore(); refreshHome();
+  }
+});
+
+function refreshHome(){
+  $("#stTotal").textContent = store.total;
+  $("#stRate").textContent  = store.total ? Math.round(store.correct/store.total*100)+"%" : "–";
+  $("#stWeak").textContent  = (store.wrongIds||[]).length;
+}
+
+/* 初期化 */
+(function init(){
+  $("#poolBadge").textContent = `収録 ${QUESTIONS.length} 問`;
+  refreshHome();
+  // 保存可否のメッセージを初期表示
+  try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); $("#storeNote").textContent="履歴は自動保存されています"; }
+  catch(e){ $("#storeNote").textContent="※この環境では履歴を保存できません(自分のPC/サーバーに置くと保存可)"; }
+})();
+</script>
+</body>
+</html>
